@@ -11,12 +11,12 @@
     <div class="panel-section">
       <div class="form-item">
         <label>航线名称</label>
-        <a-input v-model:value="waylineDraw.state.config.name" size="small" placeholder="输入航线名称" />
+        <a-input :value="waylineDraw.state.config.name" @change="(e: any) => onConfigChange('name', e.target.value)" size="small" placeholder="输入航线名称" />
       </div>
       <div class="form-row">
         <div class="form-item half">
           <label>飞行速度(m/s)</label>
-          <a-input-number v-model:value="waylineDraw.state.config.autoFlightSpeed" :min="1" :max="15" size="small" style="width: 100%;" />
+          <a-input-number :value="waylineDraw.state.config.autoFlightSpeed" @change="(val: number) => onConfigChange('autoFlightSpeed', val)" :min="1" :max="15" size="small" style="width: 100%;" />
         </div>
         <div class="form-item half">
           <label>默认高度(m)</label>
@@ -25,7 +25,7 @@
       </div>
       <div class="form-item">
         <label>完成动作</label>
-        <a-select v-model:value="waylineDraw.state.config.finishAction" size="small" style="width: 100%;">
+        <a-select :value="waylineDraw.state.config.finishAction" @change="(val: string) => onConfigChange('finishAction', val)" size="small" style="width: 100%;">
           <a-select-option value="goHome">返航</a-select-option>
           <a-select-option value="noAction">无动作(悬停)</a-select-option>
           <a-select-option value="autoLand">自动降落</a-select-option>
@@ -47,7 +47,7 @@
           v-for="(wp, idx) in waylineDraw.state.waypoints"
           :key="idx"
           :class="['waypoint-item', { selected: idx === waylineDraw.state.selectedIndex }]"
-          @click="waylineDraw.state.selectedIndex = idx"
+          @click="onSelectWaypoint(idx)"
         >
           <div class="wp-index">{{ idx + 1 }}</div>
           <div class="wp-info">
@@ -102,6 +102,14 @@ const props = defineProps<{
 const emit = defineEmits(['saved', 'cancelled'])
 
 const defaultHeight = ref(50)
+
+function onConfigChange (key: string, value: any) {
+  ;(props.waylineDraw.state.config as any)[key] = value
+}
+
+function onSelectWaypoint (idx: number) {
+  props.waylineDraw.state.selectedIndex = idx
+}
 
 async function onSave () {
   const success = await props.waylineDraw.saveWayline()
