@@ -238,6 +238,20 @@ export function useWaylineDraw () {
     })
   }
 
+  /**
+   * Select a waypoint by index
+   */
+  function selectWaypoint (index: number) {
+    state.selectedIndex = index
+  }
+
+  /**
+   * Update a config field
+   */
+  function updateConfig (key: string, value: any) {
+    ;(state.config as any)[key] = value
+  }
+
   return {
     state,
     saving,
@@ -247,6 +261,8 @@ export function useWaylineDraw () {
     removeLastWaypoint,
     removeWaypoint,
     updateWaypoint,
+    selectWaypoint,
+    updateConfig,
     saveWayline,
     renderWaypoints,
   }
