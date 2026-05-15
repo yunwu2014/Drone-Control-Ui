@@ -5,9 +5,14 @@
       <div class="brand-bg">
         <div class="bg-shape shape-1" />
         <div class="bg-shape shape-2" />
-        <div class="bg-shape shape-3" />
         <div class="bg-grid" />
       </div>
+
+      <!-- 无人机插画背景（原创 SVG） -->
+      <div class="brand-illustration">
+        <DroneIllustration color="#19be6b" accent="#5ce6a5" />
+      </div>
+
       <div class="brand-content">
         <div class="brand-header">
           <div class="brand-logo">
@@ -141,6 +146,7 @@
 
 <script lang="ts" setup>
 import droneIcon from '/@/assets/icons/drone.png'
+import DroneIllustration from '/@/components/common/drone-illustration.vue'
 import { message } from 'ant-design-vue'
 import { onMounted, reactive, computed, UnwrapRef, ref } from 'vue'
 import { CURRENT_CONFIG } from '/@/api/http/config'
@@ -302,31 +308,21 @@ $primary-dark: #0e9e55;
   }
 
   .shape-1 {
-    width: 600px;
-    height: 600px;
-    background: radial-gradient(circle, rgba(25, 190, 107, 0.35) 0%, transparent 70%);
-    top: -200px;
-    right: -150px;
+    width: 540px;
+    height: 540px;
+    background: radial-gradient(circle, rgba(25, 190, 107, 0.28) 0%, transparent 70%);
+    top: -220px;
+    right: -180px;
     animation: float 9s ease-in-out infinite;
   }
 
   .shape-2 {
-    width: 420px;
-    height: 420px;
-    background: radial-gradient(circle, rgba(92, 230, 165, 0.22) 0%, transparent 70%);
-    bottom: -120px;
-    left: -100px;
+    width: 380px;
+    height: 380px;
+    background: radial-gradient(circle, rgba(92, 230, 165, 0.18) 0%, transparent 70%);
+    bottom: -140px;
+    left: -120px;
     animation: float 11s ease-in-out infinite reverse;
-  }
-
-  .shape-3 {
-    width: 320px;
-    height: 320px;
-    background: radial-gradient(circle, rgba(140, 255, 200, 0.18) 0%, transparent 70%);
-    top: 40%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    animation: pulse 7s ease-in-out infinite;
   }
 
   .bg-grid {
@@ -341,14 +337,27 @@ $primary-dark: #0e9e55;
   }
 }
 
+/* 无人机插画 - 作为左侧水印背景 */
+.brand-illustration {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 0;
+  opacity: 0.35;
+  pointer-events: none;
+
+  :deep(svg) {
+    width: min(620px, 90%);
+    height: auto;
+    aspect-ratio: 1 / 1;
+  }
+}
+
 @keyframes float {
   0%, 100% { transform: translateY(0) scale(1); }
   50% { transform: translateY(-30px) scale(1.05); }
-}
-
-@keyframes pulse {
-  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
-  50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.4; }
 }
 
 .brand-content {
