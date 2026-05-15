@@ -18,11 +18,11 @@
           <div class="brand-logo">
             <img :src="droneIcon" class="brand-logo-icon" />
           </div>
-          <div class="brand-name">云端机队管理平台</div>
+          <div class="brand-name">云端无人机管理平台</div>
         </div>
         <div class="brand-hero">
           <h2 class="brand-title">
-            智能机队<br />一站式管控
+            无人机<br />一站式管控
           </h2>
           <p class="brand-desc">
             集设备管理、实时监控、任务调度于一体的<br />
