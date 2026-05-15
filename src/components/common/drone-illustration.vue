@@ -121,23 +121,18 @@
 </template>
 
 <script lang="ts" setup>
-import { computed } from 'vue'
+import { computed, defineProps } from 'vue'
 
-interface Props {
+const props = defineProps<{
   /** 主题色，作用于发光、机臂、机身轮廓、桨叶等 */
-  color?: string
+  color?: string,
   /** 辅助色，作用于左右两侧 LED */
-  accent?: string
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  color: '#2d8cf0',
-  accent: '#5cadff',
-})
+  accent?: string,
+}>()
 
 const cssStyle = computed(() => ({
-  '--di-color': props.color,
-  '--di-accent': props.accent,
+  '--di-color': props.color || '#2d8cf0',
+  '--di-accent': props.accent || '#5cadff',
 }))
 </script>
 
