@@ -104,11 +104,11 @@ const emit = defineEmits(['saved', 'cancelled'])
 const defaultHeight = ref(50)
 
 function onConfigChange (key: string, value: any) {
-  ;(props.waylineDraw.state.config as any)[key] = value
+  props.waylineDraw.updateConfig(key, value)
 }
 
 function onSelectWaypoint (idx: number) {
-  props.waylineDraw.state.selectedIndex = idx
+  props.waylineDraw.selectWaypoint(idx)
 }
 
 async function onSave () {
