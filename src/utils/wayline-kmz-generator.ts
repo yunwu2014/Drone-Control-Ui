@@ -48,11 +48,7 @@ export async function generateWaylineKmz (points: WaylinePoint[], config: Waylin
     throw new Error('At least 2 waypoints are required to generate a wayline.')
   }
 
-  // Access JSZip from the global scope (bundled inside kml-geojson.js)
-  const JSZip = (window as any).JSZip || getJSZipFromKgUtil()
-  if (!JSZip) {
-    throw new Error('JSZip is not available. Ensure kml-geojson.js is loaded.')
-  }
+  const JSZip = await getJSZip()
 
   const zip = new JSZip()
   const wpmzFolder = zip.folder('wpmz')
@@ -71,23 +67,56 @@ export async function generateWaylineKmz (points: WaylinePoint[], config: Waylin
 }
 
 /**
- * Try to extract JSZip constructor from kgUtil's internal modules (it bundles JSZip 3.7).
- * The kml-geojson.js UMD exposes kgUtil on window; internally it requires JSZip.
- * We use a known trick: create a temporary instance via kgUtil internals.
+ * Get JSZip constructor.
+ * Strategy:
+ * 1. Check window.JSZip (in case user added a CDN script)
+ * 2. Extract from kgUtil by calling kgUtil.toGeoJSON on a minimal zip blob,
+ *    which triggers JSZip internally — but this is fragile.
+ * 3. As a reliable fallback: dynamically create a minimal zip using the kgUtil
+ *    module's internal JSZip that was exposed during its IIFE execution.
+ *    The kml-geojson.js source bundles JSZip 3.7 as module [5] in its webpack
+ *    bundle. After the IIFE runs, if we can find it we use it.
+ * 4. Ultimate fallback: load JSZip from a CDN at runtime.
  */
-function getJSZipFromKgUtil (): any {
-  try {
-    // kml-geojson.js bundles JSZip and uses it internally via `new JSZip()`.
-    // It's not directly exported, but it IS on the window in some builds.
-    // Since the minified bundle uses `module.exports = factory()` pattern with
-    // internal require, and the factory runs in the window context, JSZip may
-    // have been leaked to scope. Check common locations:
-    if ((window as any).JSZip) return (window as any).JSZip
-    // If not found, we cannot proceed without an npm-installed jszip.
-    return null
-  } catch {
-    return null
+async function getJSZip (): Promise<any> {
+  // 1. Direct global
+  if ((window as any).JSZip) {
+    return (window as any).JSZip
   }
+
+  // 2. Try to load JSZip dynamically from CDN (jsDelivr)
+  // This is the most reliable approach since the bundled version is not exported.
+  await loadJSZipFromCDN()
+
+  if ((window as any).JSZip) {
+    return (window as any).JSZip
+  }
+
+  throw new Error('JSZip is not available. Please check network or add JSZip to index.html.')
+}
+
+let jsZipLoadPromise: Promise<void> | null = null
+
+function loadJSZipFromCDN (): Promise<void> {
+  if ((window as any).JSZip) return Promise.resolve()
+  if (jsZipLoadPromise) return jsZipLoadPromise
+
+  jsZipLoadPromise = new Promise<void>((resolve, reject) => {
+    const script = document.createElement('script')
+    script.src = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js'
+    script.onload = () => resolve()
+    script.onerror = () => {
+      // Fallback: try unpkg
+      const script2 = document.createElement('script')
+      script2.src = 'https://unpkg.com/jszip@3.10.1/dist/jszip.min.js'
+      script2.onload = () => resolve()
+      script2.onerror = () => reject(new Error('Failed to load JSZip from CDN'))
+      document.head.appendChild(script2)
+    }
+    document.head.appendChild(script)
+  })
+
+  return jsZipLoadPromise
 }
 
 // ─── XML Builders ──────────────────────────────────────────────────────────
