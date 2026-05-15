@@ -9,6 +9,8 @@ type Events = {
   flightAreasDroneLocationWs: any
   flightAreasSyncProgressWs: any
   flightAreasUpdateWs: any
+  startWaylinePlanning: any // 开始航线规划
+  waylinePlanSaved: any // 航线规划保存完成
 };
 
 const emitter: Emitter<Events> = mitt<Events>()

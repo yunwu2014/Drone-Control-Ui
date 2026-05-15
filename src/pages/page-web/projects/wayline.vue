@@ -6,6 +6,11 @@
         <a-col :span="1"></a-col>
         <a-col :span="15">航线库</a-col>
         <a-col :span="8" v-if="importVisible" class="flex-row flex-justify-end flex-align-center">
+          <a-tooltip title="规划航线">
+            <a-button type="text" style="color: #00ff88;" @click="startWaylinePlanning">
+              <EditOutlined />
+            </a-button>
+          </a-tooltip>
           <a-upload
             name="file"
             :multiple="false"
@@ -86,7 +91,7 @@ import { message } from 'ant-design-vue'
 import { onMounted, onUpdated, ref } from 'vue'
 import { deleteWaylineFile, downloadWaylineFile, getWaylineFiles, importKmzFile } from '/@/api/wayline'
 import { ELocalStorageKey, ERouterName } from '/@/types'
-import { EllipsisOutlined, RocketOutlined, CameraFilled, UserOutlined, SelectOutlined } from '@ant-design/icons-vue'
+import { EllipsisOutlined, RocketOutlined, CameraFilled, UserOutlined, SelectOutlined, EditOutlined } from '@ant-design/icons-vue'
 import { DEVICE_NAME } from '/@/types/device'
 import { useMyStore } from '/@/store'
 import { WaylineFile } from '/@/types/wayline'
@@ -94,6 +99,7 @@ import { downloadFile } from '/@/utils/common'
 import { IPage } from '/@/api/http/type'
 import { CURRENT_CONFIG } from '/@/api/http/config'
 import { getRoot } from '/@/root'
+import EventBus from '/@/event-bus/'
 
 const loading = ref(false)
 const store = useMyStore()
@@ -234,6 +240,23 @@ const uploadFile = async () => {
     })
   })
 }
+
+function startWaylinePlanning () {
+  EventBus.emit('startWaylinePlanning')
+}
+
+function refreshWaylines () {
+  canRefresh.value = true
+  pagination.total = 0
+  pagination.page = 1
+  waylinesData.data = []
+  getWaylines()
+}
+
+// Listen for wayline saved event from GMap planner panel
+EventBus.on('waylinePlanSaved', () => {
+  refreshWaylines()
+})
 
 </script>
 
