@@ -7,7 +7,6 @@ import { WaylinePoint, WaylinePlanConfig, generateWaylineKmz } from '/@/utils/wa
 import { importKmzFile } from '/@/api/wayline'
 import { ELocalStorageKey } from '/@/types/enums'
 import { message } from 'ant-design-vue'
-import { uuidv4 } from '/@/utils/uuid'
 
 export interface WaylineDrawState {
   isPlanning: boolean
@@ -17,8 +16,9 @@ export interface WaylineDrawState {
 }
 
 export function useWaylineDraw () {
-  const mars3d = (window as any).mars3d
-  const map = () => (window as any).$map
+  // Lazy-access mars3d and map to ensure they are initialized
+  const getMars3d = () => (window as any).mars3d
+  const getMap = () => (window as any).$map
 
   const state = reactive<WaylineDrawState>({
     isPlanning: false,
@@ -36,10 +36,19 @@ export function useWaylineDraw () {
 
   const saving = ref(false)
 
-  // Graphics references for cleanup
-  let waypointGraphics: any[] = []
-  let polylineGraphic: any = null
+  // Dedicated graphic layer for wayline planning
+  let graphicLayer: any = null
   let clickHandler: any = null
+
+  function ensureGraphicLayer () {
+    const mars3d = getMars3d()
+    const mapInstance = getMap()
+    if (!graphicLayer && mars3d && mapInstance) {
+      graphicLayer = new mars3d.layer.GraphicLayer({ name: 'wayline-planner' })
+      mapInstance.addLayer(graphicLayer)
+    }
+    return graphicLayer
+  }
 
   /**
    * Start planning mode — listen for map clicks to add waypoints
@@ -50,23 +59,25 @@ export function useWaylineDraw () {
     state.selectedIndex = -1
     state.config.name = `Wayline-${new Date().toLocaleString()}`
 
-    clearGraphics()
-
-    // Register click handler on Mars3D map
-    const mapInstance = map()
-    if (!mapInstance) {
+    const mars3d = getMars3d()
+    const mapInstance = getMap()
+    if (!mapInstance || !mars3d) {
       message.error('地图未初始化')
       return
     }
+
+    ensureGraphicLayer()
+    clearGraphics()
 
     clickHandler = (event: any) => {
       if (!state.isPlanning) return
       const cartesian = event.cartesian
       if (!cartesian) return
 
-      const cartographic = mars3d.Cesium.Cartographic.fromCartesian(cartesian)
-      const lng = mars3d.Cesium.Math.toDegrees(cartographic.longitude)
-      const lat = mars3d.Cesium.Math.toDegrees(cartographic.latitude)
+      const mars3dRef = getMars3d()
+      const cartographic = mars3dRef.Cesium.Cartographic.fromCartesian(cartesian)
+      const lng = mars3dRef.Cesium.Math.toDegrees(cartographic.longitude)
+      const lat = mars3dRef.Cesium.Math.toDegrees(cartographic.latitude)
 
       const point: WaylinePoint = {
         lng: parseFloat(lng.toFixed(7)),
@@ -88,8 +99,9 @@ export function useWaylineDraw () {
    */
   function stopPlanning () {
     state.isPlanning = false
-    const mapInstance = map()
-    if (mapInstance && clickHandler) {
+    const mars3d = getMars3d()
+    const mapInstance = getMap()
+    if (mapInstance && clickHandler && mars3d) {
       mapInstance.off(mars3d.EventType.click, clickHandler)
       clickHandler = null
     }
@@ -138,6 +150,20 @@ export function useWaylineDraw () {
   }
 
   /**
+   * Select a waypoint by index
+   */
+  function selectWaypoint (index: number) {
+    state.selectedIndex = index
+  }
+
+  /**
+   * Update a config field
+   */
+  function updateConfig (key: string, value: any) {
+    ;(state.config as any)[key] = value
+  }
+
+  /**
    * Save the planned wayline — generate KMZ and upload to backend
    */
   async function saveWayline (): Promise<boolean> {
@@ -182,29 +208,23 @@ export function useWaylineDraw () {
   // ─── Rendering ──────────────────────────────────────────────────────────
 
   function clearGraphics () {
-    const mapInstance = map()
-    if (!mapInstance) return
-
-    waypointGraphics.forEach(g => {
-      try { mapInstance.removeGraphic(g) } catch {}
-    })
-    waypointGraphics = []
-
-    if (polylineGraphic) {
-      try { mapInstance.removeGraphic(polylineGraphic) } catch {}
-      polylineGraphic = null
+    if (graphicLayer) {
+      graphicLayer.clear()
     }
   }
 
   function renderWaypoints () {
-    clearGraphics()
-    const mapInstance = map()
-    if (!mapInstance || !mars3d) return
+    const mars3d = getMars3d()
+    const layer = ensureGraphicLayer()
+    if (!layer || !mars3d) return
+
+    // Clear previous graphics
+    layer.clear()
 
     // Draw polyline connecting waypoints
     if (state.waypoints.length >= 2) {
       const positions = state.waypoints.map(p => [p.lng, p.lat, p.height || 50])
-      polylineGraphic = new mars3d.graphic.PolylineEntity({
+      const polyline = new mars3d.graphic.PolylineEntity({
         positions,
         style: {
           color: '#00FF88',
@@ -213,7 +233,7 @@ export function useWaylineDraw () {
           clampToGround: false,
         },
       })
-      mapInstance.addGraphic(polylineGraphic)
+      layer.addGraphic(polyline)
     }
 
     // Draw waypoint markers
@@ -233,23 +253,8 @@ export function useWaylineDraw () {
           anchor: [12, 12],
         },
       })
-      mapInstance.addGraphic(graphic)
-      waypointGraphics.push(graphic)
+      layer.addGraphic(graphic)
     })
-  }
-
-  /**
-   * Select a waypoint by index
-   */
-  function selectWaypoint (index: number) {
-    state.selectedIndex = index
-  }
-
-  /**
-   * Update a config field
-   */
-  function updateConfig (key: string, value: any) {
-    ;(state.config as any)[key] = value
   }
 
   return {
