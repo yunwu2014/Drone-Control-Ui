@@ -357,6 +357,12 @@
 			</a>
 			<LivestreamAgora />
 		</div>
+		<!-- Wayline Planner Panel -->
+		<WaylinePlannerPanel
+			:wayline-draw="waylineDrawHook"
+			@saved="onWaylinePlanSaved"
+			@cancelled="onWaylinePlanCancelled"
+		/>
 	</div>
 </template>
 
@@ -401,6 +407,9 @@ import FlightAreaActionIcon from './flight-area/FlightAreaActionIcon.vue'
 import { EFlightAreaType } from '../types/flight-area'
 import { useFlightArea } from './flight-area/use-flight-area'
 import { useFlightAreaDroneLocationEvent } from './flight-area/use-flight-area-drone-location-event'
+import WaylinePlannerPanel from './wayline/WaylinePlannerPanel.vue'
+import { useWaylineDraw } from './wayline/use-wayline-draw'
+import EventBus from '/@/event-bus/'
 
 export default defineComponent({
   components: {
@@ -428,6 +437,7 @@ export default defineComponent({
     LivestreamOthers,
     LivestreamAgora,
     FlightAreaActionIcon,
+    WaylinePlannerPanel,
   },
   name: 'GMap',
   setup () {
@@ -575,6 +585,25 @@ export default defineComponent({
     const { getDrawFlightAreaCallback, onFlightAreaDroneLocationWs } = useFlightArea()
     useFlightAreaDroneLocationEvent(onFlightAreaDroneLocationWs)
 
+    // Wayline Planning
+    const waylineDrawHook = useWaylineDraw()
+
+    EventBus.on('startWaylinePlanning', () => {
+      // Stop any current drawing mode
+      if (mouseMode.value) {
+        draw('off' as MapDoodleType, false)
+      }
+      waylineDrawHook.startPlanning()
+    })
+
+    function onWaylinePlanSaved () {
+      EventBus.emit('waylinePlanSaved', null)
+    }
+
+    function onWaylinePlanCancelled () {
+      // nothing special needed
+    }
+
     function selectFlightAreaAction ({ type, isCircle } : { type : EFlightAreaType, isCircle : boolean }) {
       draw(isCircle ? MapDoodleEnum.CIRCLE : MapDoodleEnum.POLYGON, true, type)
     }
@@ -688,6 +717,9 @@ export default defineComponent({
       closeLivestreamAgora,
       qualityStyle,
       selectFlightAreaAction,
+      waylineDrawHook,
+      onWaylinePlanSaved,
+      onWaylinePlanCancelled,
     }
   }
 })
